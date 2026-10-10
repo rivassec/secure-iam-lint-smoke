@@ -1,0 +1,71 @@
+name: smoke
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  smoke-v1-1-0:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: clean (expect success / 0)
+        id: clean
+        uses: rivassec/secure-iam-lint@v1.1.0
+        with: { paths: policies/clean.json, family: identity }
+      - name: risky (expect failure / 1)
+        id: risky
+        continue-on-error: true
+        uses: rivassec/secure-iam-lint@v1.1.0
+        with: { paths: policies/risky.json, family: identity }
+      - name: malformed (expect failure / 3)
+        id: malformed
+        continue-on-error: true
+        uses: rivassec/secure-iam-lint@v1.1.0
+        with: { paths: policies/malformed.json, family: identity }
+      - name: assert
+        env:
+          C_OUT: ${{ steps.clean.outcome }}
+          C_CODE: ${{ steps.clean.outputs.exit-code }}
+          R_OUT: ${{ steps.risky.outcome }}
+          R_CODE: ${{ steps.risky.outputs.exit-code }}
+          M_OUT: ${{ steps.malformed.outcome }}
+          M_CODE: ${{ steps.malformed.outputs.exit-code }}
+        run: |
+          echo "clean=$C_OUT/$C_CODE risky=$R_OUT/$R_CODE malformed=$M_OUT/$M_CODE"
+          test "$C_OUT" = success && test "$C_CODE" = 0
+          test "$R_OUT" = failure && test "$R_CODE" = 1
+          test "$M_OUT" = failure && test "$M_CODE" = 3
+  smoke-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: clean (expect success / 0)
+        id: clean
+        uses: rivassec/secure-iam-lint@v1
+        with: { paths: policies/clean.json, family: identity }
+      - name: risky (expect failure / 1)
+        id: risky
+        continue-on-error: true
+        uses: rivassec/secure-iam-lint@v1
+        with: { paths: policies/risky.json, family: identity }
+      - name: malformed (expect failure / 3)
+        id: malformed
+        continue-on-error: true
+        uses: rivassec/secure-iam-lint@v1
+        with: { paths: policies/malformed.json, family: identity }
+      - name: assert
+        env:
+          C_OUT: ${{ steps.clean.outcome }}
+          C_CODE: ${{ steps.clean.outputs.exit-code }}
+          R_OUT: ${{ steps.risky.outcome }}
+          R_CODE: ${{ steps.risky.outputs.exit-code }}
+          M_OUT: ${{ steps.malformed.outcome }}
+          M_CODE: ${{ steps.malformed.outputs.exit-code }}
+        run: |
+          echo "clean=$C_OUT/$C_CODE risky=$R_OUT/$R_CODE malformed=$M_OUT/$M_CODE"
+          test "$C_OUT" = success && test "$C_CODE" = 0
+          test "$R_OUT" = failure && test "$R_CODE" = 1
+          test "$M_OUT" = failure && test "$M_CODE" = 3
